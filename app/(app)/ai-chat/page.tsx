@@ -3,8 +3,6 @@ import React from "react";
 import AIChat from "@/components/AIChat.jsx";
 import SOSButton from "@/components/SOSButton.jsx";
 
-
-
 export default function AIChatPage() {
   return (
     <div className="min-h-screen bg-slate-900 text-white p-4 flex flex-col items-center justify-center gap-6 max-w-md mx-auto">
@@ -27,7 +25,7 @@ export default function AIChatPage() {
         <p className="text-xs text-slate-400 mb-2">
           Need immediate official crisis assistance?
         </p>
-        <SOSButton onDevSOS={() => console.log("SOS Clicked")} />
+        <SOSButton onOpenSOS={() => console.log("SOS Clicked")} />
       </div>
     </div>
   );
