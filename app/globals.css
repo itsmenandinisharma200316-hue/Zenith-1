@@ -1,0 +1,143 @@
+@import "tailwindcss";
+
+/* ───────────────────────── Zenith design tokens ───────────────────────── */
+@theme {
+  /* Surfaces — deep navy, low-glare for evening use */
+  --color-void: #070B16;
+  --color-abyss: #0A0F1F;
+  --color-surface: #141B32;
+  --color-surface-2: #1A2240;
+  --color-surface-3: #232C4E;
+  --color-hairline: #26304F;
+
+  /* Ink */
+  --color-ink: #FFFFFF;
+  --color-ink-2: #A6AFCB;
+  --color-ink-3: #6C7699;
+
+  /* Accents */
+  --color-mint: #2FE3C3;
+  --color-mint-deep: #17B79B;
+  --color-violet: #7B6CF6;
+  --color-violet-deep: #4A3FB0;
+  --color-amber: #F7B84B;
+  --color-rose: #F2718C;
+
+  /* Type */
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+  /* Motion — one vocabulary, used everywhere */
+  --ease-snap: cubic-bezier(0.2, 0, 0, 1);
+  --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-overshoot: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* Elevation */
+  --shadow-card: 0 1px 0 0 rgb(255 255 255 / 0.04) inset, 0 12px 32px -12px rgb(0 0 0 / 0.7);
+  --shadow-lift: 0 24px 60px -20px rgb(0 0 0 / 0.85);
+}
+
+/* ───────────────────────── Base ───────────────────────── */
+:root {
+  color-scheme: dark;
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  /* Height of the floating tab bar + its bottom gap. Content pads to clear it. */
+  --tabbar: 78px;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  background: var(--color-void);
+}
+
+body {
+  background: var(--color-abyss);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  /* Prevent iOS rubber-band revealing white behind the app */
+  overscroll-behavior-y: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Display type: tight tracking, the reference's signature */
+.display {
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.04;
+}
+
+.eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* Numerals that don't jitter while animating */
+.tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* ───────────────────────── Utilities ───────────────────────── */
+@utility card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-hairline);
+  border-radius: 20px;
+  box-shadow: var(--shadow-card);
+}
+
+@utility press {
+  /* Applied to non-motion tappables so every touch has feedback */
+  transition: transform 120ms var(--ease-snap), opacity 120ms var(--ease-snap);
+}
+.press:active {
+  transform: scale(0.97);
+}
+
+/* Focus ring — never removed, only restyled */
+:where(a, button, [role="button"], input, select, textarea):focus-visible {
+  outline: 2px solid var(--color-mint);
+  outline-offset: 2px;
+  border-radius: 10px;
+}
+
+/* Hide scrollbars on horizontal rails without losing scrollability */
+@utility no-bar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-bar::-webkit-scrollbar {
+  display: none;
+}
+
+@utility edge-fade {
+  /* Fades a horizontal rail at both ends */
+  mask-image: linear-gradient(to right, transparent 0, #000 16px, #000 calc(100% - 16px), transparent 100%);
+}
+
+/* Aurora backdrop used on hero surfaces */
+@utility aurora {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(60% 45% at 80% 0%, color-mix(in oklab, var(--color-violet) 40%, transparent), transparent 70%),
+    radial-gradient(55% 40% at 0% 15%, color-mix(in oklab, var(--color-mint) 16%, transparent), transparent 70%);
+}
+
+/* ───────────────────────── Accessibility ───────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
