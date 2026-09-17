@@ -1,0 +1,10 @@
+{
+  "name": "Zenith",
+  "short_name": "Zenith",
+  "description": "Mindfulness that fits the way you live.",
+  "start_url": "/home",
+  "display": "standalone",
+  "background_color": "#0A0F1F",
+  "theme_color": "#0A0F1F",
+  "orientation": "portrait"
+}
