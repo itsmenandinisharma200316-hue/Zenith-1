@@ -27,7 +27,7 @@ export default function AIChatPage() {
         <p className="text-xs text-slate-400 mb-2">
           Need immediate official crisis assistance?
         </p>
-        <SOSButton />
+        <SOSButton onDevSOS={() => console.log("SOS Clicked")} />
       </div>
     </div>
   );
