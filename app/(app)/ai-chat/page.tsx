@@ -1,7 +1,8 @@
 "use client";
 import React from "react";
-import AIChat from "../../components/AIChat.jsx";
-import SOSButton from "../../components/SOSButton.jsx";
+import AIChat from "@/components/AIChat.jsx";
+import SOSButton from "@/components/SOSButton.jsx";
+
 
 
 export default function AIChatPage() {
