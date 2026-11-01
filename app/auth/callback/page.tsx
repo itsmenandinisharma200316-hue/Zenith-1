@@ -28,7 +28,7 @@ export default function AuthCallbackPage() {
         if (active) setMessage(error?.message ?? "We couldn't confirm your session. Please try signing in again.");
         return;
       }
-      router.replace("/home");
+      router.replace("/onboarding");
     };
     void finish();
     return () => { active = false; };
