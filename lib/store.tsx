@@ -267,6 +267,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
     return () => {
       active = false;
+      // Clear the dedupe marker so a fresh effect setup can load the user again.
+      // This matters when React replays effects during development/strict mode.
+      loadedUser.current = null;
       listener.subscription.unsubscribe();
     };
   }, []);
