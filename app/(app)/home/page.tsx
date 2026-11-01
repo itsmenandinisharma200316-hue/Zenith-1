@@ -318,7 +318,7 @@ export default function Home() {
               <span className="min-w-0 flex-1">
                 <span className="block text-[15px] font-extrabold">{CHALLENGES[0].title}</span>
                 <span className="block text-[12.5px] text-ink-2 tnum">
-                  {state.challengeProgress[CHALLENGES[0].id] ?? CHALLENGES[0].done} of {CHALLENGES[0].total} days done
+                  {state.challengeProgress[CHALLENGES[0].id] ?? 0} of {CHALLENGES[0].total} days done
                 </span>
               </span>
               <Icon name="chevron-right" size={18} className="text-ink-3" />
