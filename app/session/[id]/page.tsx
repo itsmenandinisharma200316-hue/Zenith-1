@@ -289,9 +289,13 @@ function Complete({
           animate={{ opacity: 1, y: 0 }}
           transition={{ ...ui, delay: 0.12 }}
         >
-          {minutes > 0 ? `That’s ${minutes} minute${minutes === 1 ? "" : "s"}` : "A moment for yourself"}
-          <br />
-          you gave yourself.
+          {minutes > 0 ? (
+            <>
+              That’s {minutes} minute{minutes === 1 ? "" : "s"}
+              <br />
+              you gave yourself.
+            </>
+          ) : "A moment for yourself."}
         </motion.h1>
 
         <motion.div
