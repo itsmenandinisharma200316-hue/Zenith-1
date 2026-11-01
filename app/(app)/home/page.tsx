@@ -32,7 +32,7 @@ export default function Home() {
   }, []);
 
   const name = state.profile.name || "friend";
-  const mood = today?.mood ?? 3.6;
+  const mood = today?.mood ?? null;
 
   return (
     <Screen>
@@ -225,7 +225,7 @@ export default function Home() {
             <div className="flex items-start justify-between">
               <div>
                 <p className="eyebrow mb-1.5 text-ink-3">How are you feeling?</p>
-                <p className="display text-[26px]">{MOOD_WORDS[Math.max(0, Math.round(mood) - 1)]}</p>
+                <p className="display text-[26px]">{mood === null ? "Not checked in" : MOOD_WORDS[Math.max(0, Math.round(mood) - 1)]}</p>
               </div>
               <motion.button
                 onClick={() => setCheckOpen((v) => !v)}
@@ -260,7 +260,7 @@ export default function Home() {
                           setCheckOpen(false);
                         }}
                         className={`min-h-[44px] flex-1 rounded-xl border text-[12px] font-bold ${
-                          Math.round(mood) === i + 1
+                          mood !== null && Math.round(mood) === i + 1
                             ? "border-mint/60 bg-mint/12 text-mint"
                             : "border-hairline bg-surface-2 text-ink-2"
                         }`}
@@ -275,9 +275,9 @@ export default function Home() {
 
             <div className="mt-4 grid grid-cols-3 gap-3 border-t border-hairline pt-4 text-center">
               {[
-                { k: "Mood", v: MOOD_WORDS[Math.max(0, Math.round(mood) - 1)] },
-                { k: "Stress", v: (today?.calm ?? 3.9) >= 3.5 ? "Low" : "Moderate" },
-                { k: "Energy", v: (today?.energy ?? 3.8) >= 3.5 ? "Steady" : "Dipping" },
+                { k: "Mood", v: mood === null ? "—" : MOOD_WORDS[Math.max(0, Math.round(mood) - 1)] },
+                { k: "Stress", v: today ? (today.calm >= 3.5 ? "Low" : "Moderate") : "—" },
+                { k: "Energy", v: today ? (today.energy >= 3.5 ? "Steady" : "Dipping") : "—" },
               ].map((c) => (
                 <div key={c.k}>
                   <p className="eyebrow mb-1 text-[9.5px] text-ink-3">{c.k}</p>
