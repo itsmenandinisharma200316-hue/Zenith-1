@@ -93,8 +93,6 @@ function reducer(state: AppState, action: Action): AppState {
     case "profile":
       return { ...state, profile: { ...state.profile, ...action.patch } };
     case "complete": {
-      const session = SESSIONS.find((s) => s.id === action.activity.sessionId);
-      const firstOpen = state.tasks.findIndex((t) => !t.done);
       const activities = [action.activity, ...state.activities];
       const progress = progressFromActivities(activities);
       return {
@@ -103,7 +101,10 @@ function reducer(state: AppState, action: Action): AppState {
         streak: streakFromActivities(activities),
         activities,
         challengeProgress: progress,
-        tasks: firstOpen === -1 ? state.tasks : state.tasks.map((t, i) => (i === firstOpen ? { ...t, done: true } : t)),
+        // A completed session specifically completes the Mindfulness task.
+        tasks: state.tasks.map((task) =>
+          task.id === "t1" ? { ...task, done: true } : task,
+        ),
       };
     }
     case "toggleTask":
@@ -112,7 +113,14 @@ function reducer(state: AppState, action: Action): AppState {
       const day = isoDay(new Date());
       const rest = state.checkIns.filter((c) => c.day !== day);
       const current = state.checkIns.find((c) => c.day === day) ?? { day, mood: 3, calm: 3, energy: 3, sleep: 3 };
-      return { ...state, checkIns: [...rest, { ...current, [action.metric]: action.value }].sort((a, b) => a.day.localeCompare(b.day)) };
+      return {
+        ...state,
+        checkIns: [...rest, { ...current, [action.metric]: action.value }].sort((a, b) => a.day.localeCompare(b.day)),
+        // Saving a mood rating completes today's Mood check-in task.
+        tasks: state.tasks.map((task) =>
+          task.id === "t2" ? { ...task, done: true } : task,
+        ),
+      };
     }
     case "kudos":
       return { ...state, feed: state.feed.map((p) => p.id === action.id ? { ...p, kudosByMe: !p.kudosByMe, kudos: p.kudos + (p.kudosByMe ? -1 : 1) } : p) };
@@ -218,11 +226,27 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         reminder: (p.reminder ?? null) as string | null,
         onboarded: Boolean(p.onboarded),
       };
+      const todayKey = isoDay(new Date());
+      const didMindfulnessToday = activities.some(
+        (activity) => isoDay(new Date(activity.at)) === todayKey,
+      );
+      const didMoodCheckInToday = checkIns.some((checkIn) => checkIn.day === todayKey);
+
       const nextState: AppState = {
         ...base,
         profile,
         activities,
         checkIns,
+        // Rebuild today's completed tasks from saved user records after refresh.
+        tasks: base.tasks.map((task) => ({
+          ...task,
+          done:
+            task.id === "t1"
+              ? didMindfulnessToday
+              : task.id === "t2"
+                ? didMoodCheckInToday
+                : false,
+        })),
         xp: activities.reduce((sum, activity) => sum + activity.xp, 0),
         streak: streakFromActivities(activities),
         challengeProgress: progressFromActivities(activities),
