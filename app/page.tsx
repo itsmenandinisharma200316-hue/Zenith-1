@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "motion/react";
+import { useEffect } from "react";
 import { Wordmark, Logo } from "@/components/Icon";
 import { Button } from "@/components/ui";
 import { useStore } from "@/lib/store";
