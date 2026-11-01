@@ -31,8 +31,8 @@ export default function Onboarding() {
     setStep((s) => s + delta);
   };
 
-  const finish = () => {
-    setProfile({
+  const finish = async () => {
+    await setProfile({
       name: name.trim() || "friend",
       handle: (name.trim() || "you").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 14) || "you",
       goals,
