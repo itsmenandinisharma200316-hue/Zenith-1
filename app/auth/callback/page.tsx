@@ -24,10 +24,20 @@ export default function AuthCallbackPage() {
       return;
     }
 
-    const goToApp = () => {
+    const goToApp = (userId: string) => {
       if (finished) return;
       finished = true;
-      router.replace("/onboarding");
+      // Defer the profile lookup until the auth callback has released its lock.
+      window.setTimeout(() => {
+        void (async () => {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("onboarded")
+            .eq("id", userId)
+            .maybeSingle();
+          router.replace(profile?.onboarded ? "/home" : "/onboarding");
+        })();
+      }, 0);
     };
 
     // The Supabase browser client automatically processes the OAuth callback
@@ -35,7 +45,7 @@ export default function AuthCallbackPage() {
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (session && (event === "SIGNED_IN" || event === "INITIAL_SESSION")) {
-          goToApp();
+          goToApp(session.user.id);
         }
       },
     );
