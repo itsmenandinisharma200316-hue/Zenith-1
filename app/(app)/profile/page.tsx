@@ -9,9 +9,10 @@ import { Avatar, Bar, Card, Pill, Screen, SectionTitle, Stagger, TopBar } from "
 import { CHALLENGES, GOALS, levelFor, sessionById } from "@/lib/data";
 import { micro, tap } from "@/lib/motion";
 import { useStore } from "@/lib/store";
+import { supabase } from "@/lib/supabase";
 
 export default function ProfilePage() {
-  const { state, dispatch } = useStore();
+  const { state } = useStore();
   const router = useRouter();
   const [sharing, setSharing] = useState(false);
 
@@ -22,7 +23,7 @@ export default function ProfilePage() {
 
   const badges = CHALLENGES.map((c) => ({
     ...c,
-    earned: (state.challengeProgress[c.id] ?? c.done) >= c.total,
+    earned: (state.challengeProgress[c.id] ?? 0) >= c.total,
   }));
 
   return (
@@ -102,7 +103,7 @@ export default function ProfilePage() {
                   </span>
                   <span className="text-[14px] font-extrabold leading-tight">{b.reward}</span>
                   <span className="tnum text-[12px] text-ink-3">
-                    {b.earned ? "Earned" : `${state.challengeProgress[b.id] ?? b.done} / ${b.total}`}
+                    {b.earned ? "Earned" : `${state.challengeProgress[b.id] ?? 0} / ${b.total}`}
                   </span>
                 </Card>
               ))}
@@ -143,11 +144,10 @@ export default function ProfilePage() {
               {[
                 { icon: "sliders" as IconName, label: "Redo onboarding", onClick: () => router.push("/onboarding") },
                 {
-                  icon: "x" as IconName,
-                  label: "Reset demo data",
+                  icon: "log-out" as IconName,
+                  label: "Sign out",
                   onClick: () => {
-                    dispatch({ type: "reset" });
-                    router.push("/home");
+                    void supabase?.auth.signOut().then(() => router.replace("/login"));
                   },
                 },
               ].map((row) => (
