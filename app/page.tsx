@@ -5,10 +5,16 @@ import { useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "motion/react";
 import { Wordmark, Logo } from "@/components/Icon";
 import { Button } from "@/components/ui";
+import { useStore } from "@/lib/store";
 
 export default function Welcome() {
+  const { state, ready, userId } = useStore();
   const router = useRouter();
   const reduce = useReducedMotion();
+
+  useEffect(() => {
+    if (ready && userId) router.replace(state.profile.onboarded ? "/home" : "/onboarding");
+  }, [ready, userId, state.profile.onboarded, router]);
 
 
   return (
