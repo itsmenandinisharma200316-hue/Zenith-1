@@ -56,7 +56,7 @@ export default function AuthCallbackPage() {
       if (error) {
         setMessage(error.message);
       } else if (data.session) {
-        goToApp();
+        goToApp(data.session.user.id);
       } else {
         setMessage(
           "Supabase returned to Zenith without an active session. Please check the Supabase Google provider and callback URL, then try again.",
