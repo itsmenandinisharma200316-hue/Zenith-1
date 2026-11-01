@@ -6,7 +6,7 @@ export type IconName =
   | "star" | "check" | "play" | "pause" | "arrow-right" | "arrow-left"
   | "arrow-up-right" | "chevron-right" | "calendar" | "sliders" | "trend"
   | "share" | "download" | "spark" | "flame" | "plus" | "x" | "medal"
-  | "heart" | "lock" | "camera" | "copy" | "link";
+  | "heart" | "lock" | "camera" | "copy" | "link" | "log-out";
 
 const P: Record<IconName, string> = {
   home: "M3 10.5 12 3l9 7.5M5.5 9.5V20h13V9.5",
@@ -45,6 +45,7 @@ const P: Record<IconName, string> = {
   camera: "M4 8.5h3l1.5-2.5h7L17 8.5h3a1 1 0 0 1 1 1v8.5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5a1 1 0 0 1 1-1ZM12 16.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z",
   copy: "M9 9h9.5a1 1 0 0 1 1 1V19a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V10a1 1 0 0 1 1-1ZM5 15H5.5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1H15a1 1 0 0 1 1 1v.5",
   link: "M10 13.5a3.5 3.5 0 0 0 5 0l2.5-2.5a3.54 3.54 0 0 0-5-5L11 7.5M14 10.5a3.5 3.5 0 0 0-5 0L6.5 13a3.54 3.54 0 0 0 5 5l1.5-1.5",
+  "log-out": "M10 17l5-5-5-5m5 5H3m9-9h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6",
 };
 
 interface Props extends Omit<SVGProps<SVGSVGElement>, "name"> {
