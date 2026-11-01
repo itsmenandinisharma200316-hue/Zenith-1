@@ -26,6 +26,8 @@ export default function SessionPlayer() {
 
   const [running, setRunning] = useState(false);
   const [elapsed, setElapsed] = useState(0);
+  const elapsedRef = useRef(0);
+  elapsedRef.current = elapsed;
   const [phase, setPhase] = useState<Phase>("inhale");
   const [phaseLeft, setPhaseLeft] = useState(session.pattern[0]);
   const [finished, setFinished] = useState(false);
@@ -43,22 +45,29 @@ export default function SessionPlayer() {
     ] as [Phase, number][]).filter(([, d]) => d > 0);
   }, [session.pattern]);
 
-  const finish = useCallback(() => {
+  const finish = useCallback((completedNaturally = false) => {
     setRunning(false);
     setFinished(true);
     if (savedRef.current) return;
     savedRef.current = true;
-    complete({
-      id: `a-${Date.now()}`,
-      sessionId: session.id,
-      title: session.title,
-      kind: session.kind,
-      minutes: session.minutes,
-      xp: session.xp,
-      at: new Date().toISOString(),
-      streakAtTime: state.streak,
-    });
-  }, [complete, session, state.streak]);
+    const secondsPractised = completedNaturally ? total : elapsedRef.current;
+    const minutesPractised = Math.floor(secondsPractised / 60);
+    const xpEarned = completedNaturally
+      ? session.xp
+      : Math.round((session.xp * secondsPractised) / total);
+    if (minutesPractised > 0) {
+      complete({
+        id: `a-${Date.now()}`,
+        sessionId: session.id,
+        title: session.title,
+        kind: session.kind,
+        minutes: minutesPractised,
+        xp: xpEarned,
+        at: new Date().toISOString(),
+        streakAtTime: state.streak,
+      });
+    }
+  }, [complete, session, state.streak, total]);
 
   /* One clock drives both the total timer and the phase cycle. */
   useEffect(() => {
@@ -72,7 +81,7 @@ export default function SessionPlayer() {
         const next = e + 1;
         if (next >= total) {
           window.clearInterval(t);
-          finish();
+          finish(true);
           return total;
         }
         return next;
@@ -211,7 +220,7 @@ export default function SessionPlayer() {
             {running ? "Pause" : elapsed ? "Resume" : "Begin"}
           </motion.button>
           <motion.button
-            onClick={finish}
+            onClick={() => finish(false)}
             whileTap={{ scale: 0.97 }}
             transition={micro}
             className="grid min-h-[56px] w-16 place-items-center rounded-2xl border border-hairline bg-surface-2 text-ink-2"
