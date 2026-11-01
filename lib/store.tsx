@@ -94,12 +94,9 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, profile: { ...state.profile, ...action.patch } };
     case "complete": {
       const session = SESSIONS.find((s) => s.id === action.activity.sessionId);
-      const progress = { ...state.challengeProgress };
-      progress["calm-quest"] = Math.min(7, (progress["calm-quest"] ?? 0) + 1);
-      if (session?.goal === "focus") progress["focus-sprint"] = Math.min(5, (progress["focus-sprint"] ?? 0) + 1);
-      if (session?.goal === "sleep") progress["sleep-reset"] = Math.min(3, (progress["sleep-reset"] ?? 0) + 1);
       const firstOpen = state.tasks.findIndex((t) => !t.done);
       const activities = [action.activity, ...state.activities];
+      const progress = progressFromActivities(activities);
       return {
         ...state,
         xp: state.xp + action.activity.xp,
