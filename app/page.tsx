@@ -14,9 +14,7 @@ export default function Welcome() {
   const reduce = useReducedMotion();
 
   // Returning users skip straight past the pitch.
-  useEffect(() => {
-    if (ready && state.profile.onboarded) router.replace("/home");
-  }, [ready, state.profile.onboarded, router]);
+  
 
   return (
     <main className="relative flex min-h-dvh flex-col overflow-hidden px-5"
@@ -97,12 +95,11 @@ export default function Welcome() {
             Mindfulness that fits the way you live.
           </p>,
           <div key="cta" className="space-y-1">
-            <Button onClick={() => router.push("/onboarding")} icon="arrow-right">
+            <Button onClick={() => router.push("/login")} icon="arrow-right">
               Get started
             </Button>
             <Link
-              href="/home"
-              onClick={() => localStorage.setItem("zenith.skip", "1")}
+              href="/login"
               className="grid min-h-[52px] place-items-center text-[15px] font-bold text-violet"
             >
               I already have an account
