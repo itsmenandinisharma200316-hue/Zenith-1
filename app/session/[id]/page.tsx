@@ -31,6 +31,8 @@ export default function SessionPlayer() {
   const [phase, setPhase] = useState<Phase>("inhale");
   const [phaseLeft, setPhaseLeft] = useState(session.pattern[0]);
   const [finished, setFinished] = useState(false);
+  const [completedMinutes, setCompletedMinutes] = useState(session.minutes);
+  const [earnedXp, setEarnedXp] = useState(session.xp);
   const [sharing, setSharing] = useState(false);
   const savedRef = useRef(false);
 
@@ -55,6 +57,8 @@ export default function SessionPlayer() {
     const xpEarned = completedNaturally
       ? session.xp
       : Math.round((session.xp * secondsPractised) / total);
+    setCompletedMinutes(minutesPractised);
+    setEarnedXp(xpEarned);
     if (minutesPractised > 0) {
       complete({
         id: `a-${Date.now()}`,
@@ -114,6 +118,8 @@ export default function SessionPlayer() {
     return (
       <Complete
         session={session}
+        minutes={completedMinutes}
+        xp={earnedXp}
         streak={state.streak}
         onShare={() => setSharing(true)}
         sharing={sharing}
@@ -238,6 +244,8 @@ export default function SessionPlayer() {
 
 function Complete({
   session,
+  minutes,
+  xp,
   streak,
   onShare,
   sharing,
@@ -246,6 +254,8 @@ function Complete({
   name,
 }: {
   session: (typeof SESSIONS)[number];
+  minutes: number;
+  xp: number;
   streak: number;
   onShare: () => void;
   sharing: boolean;
@@ -279,7 +289,7 @@ function Complete({
           animate={{ opacity: 1, y: 0 }}
           transition={{ ...ui, delay: 0.12 }}
         >
-          That&apos;s {session.minutes} minutes
+          {minutes > 0 ? `That’s ${minutes} minute${minutes === 1 ? "" : "s"}` : "A moment for yourself"}
           <br />
           you gave yourself.
         </motion.h1>
@@ -291,7 +301,7 @@ function Complete({
           transition={{ ...ui, delay: 0.2 }}
         >
           <Pill tint="amber">
-            <Icon name="star" size={13} strokeWidth={2.3} /> +{session.xp} XP
+            <Icon name="star" size={13} strokeWidth={2.3} /> +{xp} XP
           </Pill>
           <Pill tint="mint">
             <Icon name="flame" size={13} strokeWidth={2.3} /> {streak} day streak
@@ -318,8 +328,8 @@ function Complete({
         onClose={onCloseShare}
         data={{
           title: session.title,
-          minutes: session.minutes,
-          xp: session.xp,
+          minutes,
+          xp,
           streak,
           handle,
           name,
