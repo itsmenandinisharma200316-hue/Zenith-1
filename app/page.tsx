@@ -3,18 +3,13 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "motion/react";
-import { useEffect } from "react";
 import { Wordmark, Logo } from "@/components/Icon";
 import { Button } from "@/components/ui";
-import { useStore } from "@/lib/store";
 
 export default function Welcome() {
-  const { state, ready } = useStore();
   const router = useRouter();
   const reduce = useReducedMotion();
 
-  // Returning users skip straight past the pitch.
-  
 
   return (
     <main className="relative flex min-h-dvh flex-col overflow-hidden px-5"
