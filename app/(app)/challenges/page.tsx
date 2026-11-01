@@ -10,7 +10,7 @@ import { useStore } from "@/lib/store";
 export default function Challenges() {
   const { state } = useStore();
   const hero = CHALLENGES[0];
-  const heroDone = state.challengeProgress[hero.id] ?? hero.done;
+  const heroDone = state.challengeProgress[hero.id] ?? 0;
 
   return (
     <Screen>
@@ -93,7 +93,7 @@ export default function Challenges() {
         </Stagger.Item>
 
         {CHALLENGES.slice(1).map((c) => {
-          const done = state.challengeProgress[c.id] ?? c.done;
+          const done = state.challengeProgress[c.id] ?? 0;
           return (
             <Stagger.Item key={c.id}>
               <motion.div whileTap={c.locked ? undefined : tap} transition={micro}>
