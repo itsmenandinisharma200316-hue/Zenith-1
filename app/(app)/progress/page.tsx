@@ -23,7 +23,7 @@ export default function Progress() {
   const sessions = state.activities.length;
   const minutes = state.activities.reduce((n, a) => n + a.minutes, 0);
   const avg = sessions ? Math.round(minutes / sessions) : 0;
-  const consistency = Math.min(100, Math.round((state.checkIns.length / 7) * 82) || 82);
+  const consistency = Math.min(100, Math.round((state.checkIns.length / 7) * 100));
 
   const series = useMemo(() => state.checkIns.slice(-7).map((c) => c[metric]), [state.checkIns, metric]);
   const days = useMemo(
