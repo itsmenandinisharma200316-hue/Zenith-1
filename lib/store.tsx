@@ -7,197 +7,73 @@ import {
   useEffect,
   useMemo,
   useReducer,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
-import { CHALLENGES, FRIENDS, SESSIONS } from "./data";
+import { supabase } from "./supabase";
+import { SESSIONS } from "./data";
 import type { Activity, AppState, CheckIn, FeedPost, MetricId, Profile } from "./types";
-
-const KEY = "zenith.state.v1";
-
-/* ───────────────────────── helpers ───────────────────────── */
 
 export const isoDay = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
-const hoursAgo = (h: number) => new Date(Date.now() - h * 3600_000).toISOString();
-
-/**
- * Empty shell used for the server render. Real data is loaded from storage (or
- * seeded) on mount, so the first paint is identical on both sides.
- */
-const emptyState: AppState = {
-  profile: {
-    name: "",
-    handle: "",
-    goals: [],
-    minutesPerDay: 5,
-    motivation: null,
-    reminder: null,
-    onboarded: false,
-  },
-  xp: 0,
-  streak: 0,
-  activities: [],
-  checkIns: [],
-  tasks: [],
-  challengeProgress: {},
-  feed: [],
-  seenStories: [],
+const initialProfile: Profile = {
+  name: "",
+  handle: "",
+  goals: [],
+  minutesPerDay: 5,
+  motivation: null,
+  reminder: null,
+  onboarded: false,
 };
 
-/** A believable starting point so the app never looks like an empty demo. */
-function seedState(): AppState {
-  const today = new Date();
-  const checkIns: CheckIn[] = [];
-  const moods = [3.1, 3.4, 3.2, 3.8, 3.6, 4.1, 4.0];
-  const calms = [2.8, 3.2, 3.5, 3.4, 3.9, 4.0, 4.2];
-  const energies = [3.5, 3.0, 3.3, 3.6, 3.4, 3.8, 3.9];
-  const sleeps = [2.9, 3.1, 3.6, 3.5, 3.7, 3.9, 4.1];
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    const k = 6 - i;
-    checkIns.push({ day: isoDay(d), mood: moods[k], calm: calms[k], energy: energies[k], sleep: sleeps[k] });
-  }
-
-  /* Three weeks of practice, so the stats screen reads like a real account
-     rather than an empty demo. Deterministic: same history on every device. */
-  const plan: [string, number, number, number][] = [
-    // [sessionId, hoursAgo, minutes, xp]
-    ["unclench", 5, 4, 80],
-    ["ground", 26, 5, 100],
-    ["reset-your-mind", 31, 5, 100],
-    ["single-thread", 50, 8, 140],
-    ["wind-down", 55, 10, 160],
-    ["sunrise", 74, 3, 60],
-    ["reset-your-mind", 79, 5, 100],
-    ["name-it", 98, 6, 110],
-    ["evening-reflection", 103, 7, 120],
-    ["ground", 122, 5, 100],
-    ["unclench", 127, 4, 80],
-    ["single-thread", 146, 8, 140],
-    ["wind-down", 151, 10, 160],
-    ["reset-your-mind", 170, 5, 100],
-    ["sunrise", 175, 3, 60],
-    ["evening-reflection", 194, 7, 120],
-    ["ground", 218, 5, 100],
-    ["name-it", 242, 6, 110],
-  ];
-  const titles: Record<string, string> = {
-    "reset-your-mind": "Reset Your Mind",
-    unclench: "Unclench",
-    "single-thread": "Single Thread",
-    "wind-down": "Wind Down",
-    sunrise: "Sunrise",
-    "name-it": "Name It",
-    "evening-reflection": "Evening Reflection",
-    ground: "Ground",
-  };
-  const kinds: Record<string, Activity["kind"]> = {
-    "reset-your-mind": "breath",
-    unclench: "body",
-    "single-thread": "focus",
-    "wind-down": "sleep",
-    sunrise: "breath",
-    "name-it": "reflect",
-    "evening-reflection": "reflect",
-    ground: "body",
-  };
-  const activities: Activity[] = plan.map(([sessionId, h, minutes, xp], i) => ({
-    id: `a${i + 1}`,
-    sessionId,
-    title: titles[sessionId],
-    kind: kinds[sessionId],
-    minutes,
-    xp,
-    at: hoursAgo(h),
-    streakAtTime: Math.max(1, 5 - Math.floor(h / 24)),
-  }));
-
+function emptyState(): AppState {
   return {
-    profile: emptyState.profile,
-    xp: 1240,
-    streak: 5,
-    activities,
-    checkIns,
+    profile: initialProfile,
+    xp: 0,
+    streak: 0,
+    activities: [],
+    checkIns: [],
     tasks: [
-      { id: "t1", label: "Mindfulness", meta: "5 min", done: true },
-      { id: "t2", label: "Mood check-in", meta: "Today", done: true },
+      { id: "t1", label: "Mindfulness", meta: "5 min", done: false },
+      { id: "t2", label: "Mood check-in", meta: "Today", done: false },
       { id: "t3", label: "Evening reflection", meta: "Later", done: false },
     ],
-    challengeProgress: Object.fromEntries(CHALLENGES.map((c) => [c.id, c.done])),
-    feed: seedFeed(),
+    challengeProgress: { "calm-quest": 0, "focus-sprint": 0, "sleep-reset": 0, "weekend-recharge": 0 },
+    feed: [],
     seenStories: [],
   };
 }
 
-function seedFeed(): FeedPost[] {
-  const f = (i: number) => FRIENDS[i];
-  return [
-    {
-      id: "p1",
-      author: f(2),
-      title: "Wind Down",
-      kind: "sleep",
-      minutes: 10,
-      at: hoursAgo(1.5),
-      note: "31 days. Started because I couldn't sleep. Staying because I can.",
-      streak: 31,
-      kudos: 24,
-      kudosByMe: false,
-      milestone: "30-day streak",
-    },
-    {
-      id: "p2",
-      author: f(0),
-      title: "Single Thread",
-      kind: "focus",
-      minutes: 8,
-      at: hoursAgo(4),
-      note: "Deadline week. Eight minutes bought me back the whole afternoon.",
-      streak: 12,
-      kudos: 9,
-      kudosByMe: false,
-    },
-    {
-      id: "p3",
-      author: f(1),
-      title: "Reset Your Mind",
-      kind: "breath",
-      minutes: 5,
-      at: hoursAgo(9),
-      streak: 4,
-      kudos: 5,
-      kudosByMe: true,
-    },
-    {
-      id: "p4",
-      author: f(3),
-      title: "Sunrise",
-      kind: "breath",
-      minutes: 3,
-      at: hoursAgo(22),
-      note: "Three minutes before the kids wake up. It counts.",
-      streak: 7,
-      kudos: 14,
-      kudosByMe: false,
-    },
-    {
-      id: "p5",
-      author: f(4),
-      title: "Ground",
-      kind: "body",
-      minutes: 5,
-      at: hoursAgo(28),
-      streak: 2,
-      kudos: 3,
-      kudosByMe: false,
-    },
-  ];
+function progressFromActivities(activities: Activity[]) {
+  const now = Date.now();
+  const recent = activities.filter((a) => now - new Date(a.at).getTime() <= 7 * 24 * 60 * 60 * 1000);
+  const uniqueDays = new Set(recent.map((a) => isoDay(new Date(a.at))));
+  return {
+    "calm-quest": Math.min(7, uniqueDays.size),
+    "focus-sprint": Math.min(5, recent.filter((a) => a.kind === "focus").length),
+    "sleep-reset": Math.min(3, recent.filter((a) => a.kind === "sleep").length),
+    "weekend-recharge": 0,
+  };
 }
 
-/* ───────────────────────── reducer ───────────────────────── */
+function streakFromActivities(activities: Activity[]) {
+  const days = new Set(activities.map((a) => isoDay(new Date(a.at))));
+  const today = new Date();
+  const todayKey = isoDay(today);
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (!days.has(todayKey) && !days.has(isoDay(yesterday))) return 0;
+  let count = 0;
+  const cursor = new Date(today);
+  if (!days.has(todayKey)) cursor.setDate(cursor.getDate() - 1);
+  while (days.has(isoDay(cursor))) {
+    count += 1;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return count;
+}
 
 type Action =
   | { type: "hydrate"; state: AppState }
@@ -214,111 +90,192 @@ function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
     case "hydrate":
       return action.state;
-
     case "profile":
       return { ...state, profile: { ...state.profile, ...action.patch } };
-
     case "complete": {
       const session = SESSIONS.find((s) => s.id === action.activity.sessionId);
       const progress = { ...state.challengeProgress };
-      // A finished session advances every challenge it plausibly belongs to.
       progress["calm-quest"] = Math.min(7, (progress["calm-quest"] ?? 0) + 1);
       if (session?.goal === "focus") progress["focus-sprint"] = Math.min(5, (progress["focus-sprint"] ?? 0) + 1);
       if (session?.goal === "sleep") progress["sleep-reset"] = Math.min(3, (progress["sleep-reset"] ?? 0) + 1);
-      // Finishing a session ticks off the next open item on today's list.
       const firstOpen = state.tasks.findIndex((t) => !t.done);
+      const activities = [action.activity, ...state.activities];
       return {
         ...state,
         xp: state.xp + action.activity.xp,
-        activities: [action.activity, ...state.activities],
+        streak: streakFromActivities(activities),
+        activities,
         challengeProgress: progress,
-        tasks:
-          firstOpen === -1
-            ? state.tasks
-            : state.tasks.map((t, i) => (i === firstOpen ? { ...t, done: true } : t)),
+        tasks: firstOpen === -1 ? state.tasks : state.tasks.map((t, i) => (i === firstOpen ? { ...t, done: true } : t)),
       };
     }
-
     case "toggleTask":
-      return {
-        ...state,
-        tasks: state.tasks.map((t) => (t.id === action.id ? { ...t, done: !t.done } : t)),
-      };
-
+      return { ...state, tasks: state.tasks.map((t) => (t.id === action.id ? { ...t, done: !t.done } : t)) };
     case "checkIn": {
       const day = isoDay(new Date());
       const rest = state.checkIns.filter((c) => c.day !== day);
-      const current =
-        state.checkIns.find((c) => c.day === day) ?? { day, mood: 3, calm: 3, energy: 3, sleep: 3 };
+      const current = state.checkIns.find((c) => c.day === day) ?? { day, mood: 3, calm: 3, energy: 3, sleep: 3 };
       return { ...state, checkIns: [...rest, { ...current, [action.metric]: action.value }].sort((a, b) => a.day.localeCompare(b.day)) };
     }
-
     case "kudos":
-      return {
-        ...state,
-        feed: state.feed.map((p) =>
-          p.id === action.id
-            ? { ...p, kudosByMe: !p.kudosByMe, kudos: p.kudos + (p.kudosByMe ? -1 : 1) }
-            : p,
-        ),
-      };
-
+      return { ...state, feed: state.feed.map((p) => p.id === action.id ? { ...p, kudosByMe: !p.kudosByMe, kudos: p.kudos + (p.kudosByMe ? -1 : 1) } : p) };
     case "post":
       return { ...state, feed: [action.post, ...state.feed] };
-
     case "seeStory":
       return { ...state, seenStories: [...new Set([...state.seenStories, action.id])] };
-
     case "reset":
-      return seedState();
-
+      return emptyState();
     default:
       return state;
   }
 }
 
-/* ───────────────────────── context ───────────────────────── */
-
 interface Ctx {
   state: AppState;
   ready: boolean;
+  userId: string | null;
   dispatch: (a: Action) => void;
   today: CheckIn | undefined;
 }
 
 const StoreContext = createContext<Ctx | null>(null);
 
+async function trackEvent(userId: string, eventName: string, properties: Record<string, unknown> = {}) {
+  if (!supabase) return;
+  const { error } = await supabase.from("app_events").insert({
+    user_id: userId,
+    event_name: eventName,
+    properties,
+  });
+  if (error) console.error("Zenith analytics event could not be saved:", error.message);
+}
+
 export function StoreProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, emptyState);
+  const [state, dispatch] = useReducer(reducer, undefined, emptyState);
   const [ready, setReady] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const loadedUser = useRef<string | null>(null);
 
   useEffect(() => {
-    let next: AppState;
-    try {
-      const raw = window.localStorage.getItem(KEY);
-      next = raw ? { ...seedState(), ...(JSON.parse(raw) as AppState) } : seedState();
-    } catch {
-      next = seedState();
+    if (!supabase) {
+      setReady(true);
+      return;
     }
-    dispatch({ type: "hydrate", state: next });
-    setReady(true);
+
+    let active = true;
+
+    const loadUser = async (id: string, metadata?: Record<string, unknown>) => {
+      if (loadedUser.current === id) return;
+      loadedUser.current = id;
+      setUserId(id);
+
+      const [profileResult, activityResult, checkInResult] = await Promise.all([
+        supabase.from("profiles").select("*").eq("id", id).maybeSingle(),
+        supabase.from("activities").select("*").eq("user_id", id).order("completed_at", { ascending: false }),
+        supabase.from("check_ins").select("*").eq("user_id", id).order("day", { ascending: true }),
+      ]);
+
+      if (!active) return;
+      if (profileResult.error) console.error("Profile load failed:", profileResult.error.message);
+      if (activityResult.error) console.error("Activity load failed:", activityResult.error.message);
+      if (checkInResult.error) console.error("Check-in load failed:", checkInResult.error.message);
+
+      const profileRow = profileResult.data;
+      if (!profileRow && !profileResult.error) {
+        const displayName = String(metadata?.full_name ?? metadata?.name ?? "");
+        const avatarUrl = String(metadata?.avatar_url ?? metadata?.picture ?? "");
+        const { error } = await supabase.from("profiles").upsert(
+          { id, display_name: displayName, avatar_url: avatarUrl },
+          { onConflict: "id" },
+        );
+        if (error) console.error("Profile creation failed:", error.message);
+      }
+
+      const activities: Activity[] = (activityResult.data ?? []).map((row) => ({
+        id: String(row.id),
+        sessionId: String(row.session_id),
+        title: String(row.title),
+        kind: row.kind as Activity["kind"],
+        minutes: Number(row.minutes ?? 0),
+        xp: Number(row.xp ?? 0),
+        at: String(row.completed_at),
+        streakAtTime: Number(row.streak_at_time ?? 0),
+      }));
+
+      const checkIns: CheckIn[] = (checkInResult.data ?? []).map((row) => ({
+        day: String(row.day),
+        mood: Number(row.mood ?? 3),
+        calm: Number(row.calm ?? 3),
+        energy: Number(row.energy ?? 3),
+        sleep: Number(row.sleep ?? 3),
+      }));
+
+      const base = emptyState();
+      const p = profileRow ?? {};
+      const profile: Profile = {
+        name: String(p.display_name ?? metadata?.full_name ?? metadata?.name ?? ""),
+        handle: String(p.handle ?? ""),
+        goals: Array.isArray(p.goals) ? p.goals : [],
+        minutesPerDay: Number(p.minutes_per_day ?? 5),
+        motivation: (p.motivation ?? null) as Profile["motivation"],
+        reminder: (p.reminder ?? null) as string | null,
+        onboarded: Boolean(p.onboarded),
+      };
+      const nextState: AppState = {
+        ...base,
+        profile,
+        activities,
+        checkIns,
+        xp: activities.reduce((sum, activity) => sum + activity.xp, 0),
+        streak: streakFromActivities(activities),
+        challengeProgress: progressFromActivities(activities),
+      };
+      if (active) {
+        dispatch({ type: "hydrate", state: nextState });
+        setReady(true);
+        void trackEvent(id, "app_opened");
+      }
+    };
+
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_OUT") {
+        loadedUser.current = null;
+        setUserId(null);
+        dispatch({ type: "hydrate", state: emptyState() });
+        setReady(true);
+        return;
+      }
+      if (session?.user) {
+        void loadUser(session.user.id, session.user.user_metadata as Record<string, unknown>);
+      } else if (event === "INITIAL_SESSION") {
+        loadedUser.current = null;
+        setUserId(null);
+        dispatch({ type: "hydrate", state: emptyState() });
+        setReady(true);
+      }
+    });
+
+    void supabase.auth.getSession().then(({ data, error }) => {
+      if (!active) return;
+      if (error) console.error("Session check failed:", error.message);
+      if (data.session?.user) {
+        void loadUser(data.session.user.id, data.session.user.user_metadata as Record<string, unknown>);
+      } else {
+        loadedUser.current = null;
+        setUserId(null);
+        dispatch({ type: "hydrate", state: emptyState() });
+        setReady(true);
+      }
+    });
+
+    return () => {
+      active = false;
+      listener.subscription.unsubscribe();
+    };
   }, []);
 
-  useEffect(() => {
-    if (!ready) return;
-    try {
-      window.localStorage.setItem(KEY, JSON.stringify(state));
-    } catch {
-      /* private mode / quota — the app still works for this session */
-    }
-  }, [state, ready]);
-
-  const today = useMemo(
-    () => state.checkIns.find((c) => c.day === isoDay(new Date())),
-    [state.checkIns],
-  );
-
-  const value = useMemo(() => ({ state, ready, dispatch, today }), [state, ready, today]);
+  const today = useMemo(() => state.checkIns.find((c) => c.day === isoDay(new Date())), [state.checkIns]);
+  const value = useMemo(() => ({ state, ready, userId, dispatch, today }), [state, ready, userId, today]);
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }
 
@@ -328,16 +285,95 @@ export function useStore() {
   return ctx;
 }
 
-/** Convenience: stable callbacks for the most common writes. */
 export function useActions() {
-  const { dispatch } = useStore();
-  return {
-    complete: useCallback((activity: Activity) => dispatch({ type: "complete", activity }), [dispatch]),
-    toggleTask: useCallback((id: string) => dispatch({ type: "toggleTask", id }), [dispatch]),
-    checkIn: useCallback((metric: MetricId, value: number) => dispatch({ type: "checkIn", metric, value }), [dispatch]),
-    kudos: useCallback((id: string) => dispatch({ type: "kudos", id }), [dispatch]),
-    post: useCallback((post: FeedPost) => dispatch({ type: "post", post }), [dispatch]),
-    setProfile: useCallback((patch: Partial<Profile>) => dispatch({ type: "profile", patch }), [dispatch]),
-    seeStory: useCallback((id: string) => dispatch({ type: "seeStory", id }), [dispatch]),
-  };
+  const { dispatch, userId, state } = useStore();
+
+  const complete = useCallback((activity: Activity) => {
+    dispatch({ type: "complete", activity });
+    if (!supabase || !userId) return;
+    void (async () => {
+      const { error } = await supabase.from("activities").insert({
+        user_id: userId,
+        session_id: activity.sessionId,
+        title: activity.title,
+        kind: activity.kind,
+        minutes: activity.minutes,
+        xp: activity.xp,
+        streak_at_time: activity.streakAtTime,
+        completed_at: activity.at,
+      });
+      if (error) {
+        console.error("Session could not be saved:", error.message);
+        return;
+      }
+      await trackEvent(userId, "session_completed", {
+        session_id: activity.sessionId,
+        minutes: activity.minutes,
+        xp: activity.xp,
+      });
+    })();
+  }, [dispatch, userId]);
+
+  const checkIn = useCallback((metric: MetricId, value: number) => {
+    dispatch({ type: "checkIn", metric, value });
+    if (!supabase || !userId) return;
+    void (async () => {
+      const day = isoDay(new Date());
+      const current = state.checkIns.find((entry) => entry.day === day) ?? { day, mood: 3, calm: 3, energy: 3, sleep: 3 };
+      const next = { ...current, [metric]: value };
+      const { data: existing, error: lookupError } = await supabase
+        .from("check_ins")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("day", day)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (lookupError) {
+        console.error("Check-in lookup failed:", lookupError.message);
+        return;
+      }
+      const result = existing
+        ? await supabase.from("check_ins").update({ mood: next.mood, calm: next.calm, energy: next.energy, sleep: next.sleep }).eq("id", existing.id)
+        : await supabase.from("check_ins").insert({ user_id: userId, day, mood: next.mood, calm: next.calm, energy: next.energy, sleep: next.sleep });
+      if (result.error) {
+        console.error("Check-in could not be saved:", result.error.message);
+        return;
+      }
+      await trackEvent(userId, "wellness_check_in", { metric, value, day });
+    })();
+  }, [dispatch, state.checkIns, userId]);
+
+  const setProfile = useCallback(async (patch: Partial<Profile>) => {
+    const next = { ...state.profile, ...patch };
+    dispatch({ type: "profile", patch });
+    if (!supabase || !userId) return;
+    const { error } = await supabase.from("profiles").upsert({
+      id: userId,
+      display_name: next.name,
+      handle: next.handle,
+      goals: next.goals,
+      minutes_per_day: next.minutesPerDay,
+      motivation: next.motivation,
+      reminder: next.reminder,
+      onboarded: next.onboarded,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "id" });
+    if (error) console.error("Profile could not be saved:", error.message);
+    else await trackEvent(userId, "profile_updated", { onboarded: next.onboarded });
+  }, [dispatch, state.profile, userId]);
+
+  const toggleTask = useCallback((id: string) => {
+    dispatch({ type: "toggleTask", id });
+    if (userId) void trackEvent(userId, "daily_task_toggled", { task_id: id });
+  }, [dispatch, userId]);
+
+  const kudos = useCallback((id: string) => dispatch({ type: "kudos", id }), [dispatch]);
+  const post = useCallback((value: FeedPost) => {
+    dispatch({ type: "post", post: value });
+    if (userId) void trackEvent(userId, "community_post_created", { kind: value.kind });
+  }, [dispatch, userId]);
+  const seeStory = useCallback((id: string) => dispatch({ type: "seeStory", id }), [dispatch]);
+
+  return { complete, toggleTask, checkIn, kudos, post, setProfile, seeStory };
 }
